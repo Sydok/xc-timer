@@ -365,5 +365,19 @@
       window.addEventListener('offline', () => document.getElementById('offlineStatus').innerText = "✈️ Offline");
       window.onload = loadState;
     </script>
+
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js')
+            .then(registration => {
+              console.log('ServiceWorker successfully registered');
+            })
+            .catch(err => {
+              console.warn('ServiceWorker registration failed: ', err);
+            });
+        });
+      }
+    </script>
   </body>
 </html>
