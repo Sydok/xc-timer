@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <!-- Web App Meta Tags for Fullscreen Home Screen Launch -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+	<link rel="manifest" href="manifest.json">
+	<link rel="icon" type="image/png" href="icon.png">
+	<link rel="apple-touch-icon" href="icon.png">
+    <title>XC Timer</title>
+    
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #121212; color: #ffffff; margin: 0; padding: 20px; text-align: center; user-select: none; }
+      
+      .timers { display: flex; flex-direction: column; align-items: center; margin: 40px 0; }
+      .leg-time { font-size: 5rem; font-weight: bold; line-height: 1; font-variant-numeric: tabular-nums; color: #4dabf7; }
+      .leg-label { font-size: 1.2rem; color: #888; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px; text-align: center; }
+      .total-time { font-size: 2rem; color: #aaaaaa; margin-top: 15px; font-variant-numeric: tabular-nums; }
+      
+      .controls { display: flex; gap: 15px; justify-content: center; margin-bottom: 30px; }
+      button { border: none; border-radius: 12px; font-size: 1.4rem; font-weight: bold; padding: 20px; width: 100%; cursor: pointer; color: white; touch-action: manipulation; }
+      
+      #startBtn { background-color: #2b8a3e; flex: 1; }
+      #startBtn.running { background-color: #c92a2a; }
+      #legBtn { background-color: #1971c2; flex: 1; opacity: 0.5; pointer-events: none; }
+      #legBtn.active { opacity: 1; pointer-events: auto; }
+      
+      #saveBtn { background-color: #1971c2; flex: 1; }
+      #resetBtn { background-color: #c92a2a; flex: 1; }
+      
+      .log-container { background-color: #1e1e1e; border-radius: 12px; padding: 15px; text-align: left; max-height: 300px; overflow-y: auto; }
+      
+      .log-header, .log-row { display: grid; grid-template-columns: 1fr 1fr 1fr; padding: 10px 0; border-bottom: 1px solid #333; }
+      .log-header span:nth-child(1), .log-row span:nth-child(1) { text-align: left; }
+      .log-header span:nth-child(2), .log-row span:nth-child(2) { text-align: center; font-variant-numeric: tabular-nums; font-size: 1.1rem; }
+      .log-header span:nth-child(3), .log-row span:nth-child(3) { text-align: right; font-variant-numeric: tabular-nums; font-size: 1.1rem; }
+      
+      .log-header { font-weight: bold; color: #888; font-size: 0.9rem; text-transform: uppercase; }
+      .log-header span { font-size: 0.9rem !important; }
+      .log-row:last-child { border-bottom: none; }
+      
+      .status-bar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; font-size: 0.85rem; color: #777; margin-top: 20px; }
+      #wakeStatus { text-align: left; }
+      
+      #offlineStatus { text-align: right; cursor: pointer; padding: 5px; }
+      
+      #clockDisplay { 
+        font-size: 1rem; color: #aaa; font-weight: bold; font-variant-numeric: tabular-nums;
+        background-color: #2c2c2c; padding: 6px 12px; border-radius: 8px; cursor: pointer; text-align: center;
+      }
+
+      .modal-overlay {
+        display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.85); z-index: 1000; justify-content: center; align-items: center;
+      }
+      .modal-box {
+        background-color: #1e1e1e; padding: 30px 20px; border-radius: 16px; width: 90%; max-width: 400px;
+        text-align: center; border: 1px solid #444; box-shadow: 0 10px 25px rgba(0,0,0,0.7);
+      }
+      .modal-text { font-size: 1.5rem; margin-bottom: 25px; font-weight: bold; line-height: 1.3; }
+      .modal-buttons { display: flex; gap: 15px; }
+      .modal-btn { padding: 18px; font-size: 1.2rem; flex: 1; }
+      .btn-cancel { background-color: #495057; }
+    </style>
+  </head>
+  <body>
+    <div class="status-bar">
+      <span id="wakeStatus">🌙 Normal</span>
+      <span id="clockDisplay" onclick="toggleClockMode()" title="Tap to switch Local/Zulu">00:00:00 Z</span>
+      <span id="offlineStatus" onclick="toggleFullScreen()" title="Tap for Fullscreen">🟢 Ready</span>
+    </div>
+
+    <div class="timers">
+      <div class="leg-label" id="legLabel">Leg 1 Time</div>
+      <div class="leg-time" id="legTimeDisplay">00:00:00</div>
+      <div class="total-time" id="totalTimeDisplay">Total: 00:00:00</div>
+    </div>
+    
+    <div class="controls" id="primaryControls">
+      <button id="startBtn" onclick="toggleTimer()">START</button>
+      <button id="legBtn" onclick="recordLeg()">NEXT LEG</button>
+    </div>
+
+    <div class="controls" id="postFlightControls" style="display: none;">
+      <button id="saveBtn" onclick="saveLog()">SAVE LOG</button>
+      <button id="resetBtn" onclick="resetTimer()">RESET</button>
+    </div>
+
+    <div class="log-container" id="logContainer" style="display: none;">
+      <div class="log-header">
+        <span>Leg</span>
+        <span>Leg Time</span>
+        <span>Total Time</span>
+      </div>
+      <div id="logEntries"></div>
+    </div>
+
+    <div class="modal-overlay" id="customModal">
+      <div class="modal-box">
+        <div class="modal-text" id="modalText">Message here</div>
+        <div class="modal-buttons">
+          <button class="modal-btn btn-cancel" onclick="closeModal()">CANCEL</button>
+          <button class="modal-btn" id="modalConfirmBtn" onclick="executeModalAction()">CONFIRM</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let startTime = 0, legStartTime = 0;
+      let savedTotalTime = 0, savedLegTime = 0;
+      let isRunning = false;
+      let currentLeg = 1;
+      let wakeLock = null;
+      let pendingModalAction = null;
+      let isZulu = true; 
+
+      const startBtn = document.getElementById('startBtn');
+      const legBtn = document.getElementById('legBtn');
+      const primaryControls = document.getElementById('primaryControls');
+      const postFlightControls = document.getElementById('postFlightControls');
+      const legTimeDisplay = document.getElementById('legTimeDisplay');
+      const totalTimeDisplay = document.getElementById('totalTimeDisplay');
+      const legLabel = document.getElementById('legLabel');
+      const logContainer = document.getElementById('logContainer');
+      const logEntries = document.getElementById('logEntries');
+      const customModal = document.getElementById('customModal');
+      const clockDisplay = document.getElementById('clockDisplay');
+
+      setInterval(updateDisplay, 100);
+
+      function toggleFullScreen() {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(err => {
+            console.warn(`Error attempting to enable fullscreen: ${err.message}`);
+          });
+        } else {
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          }
+        }
+      }
+
+      function toggleClockMode() {
+        isZulu = !isZulu;
+        localStorage.setItem('xcClockZulu', isZulu);
+        updateDisplay(); 
+      }
+
+      function openModal(message, confirmText, confirmColor, actionFunction) {
+        document.getElementById('modalText').innerText = message;
+        const confirmBtn = document.getElementById('modalConfirmBtn');
+        confirmBtn.innerText = confirmText;
+        confirmBtn.style.backgroundColor = confirmColor;
+        
+        pendingModalAction = actionFunction;
+        customModal.style.display = 'flex';
+      }
+
+      function closeModal() {
+        customModal.style.display = 'none';
+        pendingModalAction = null;
+      }
+
+      function executeModalAction() {
+        if (pendingModalAction) pendingModalAction();
+        closeModal();
+      }
+
+      function saveState() {
+        const state = {
+          isRunning, savedTotalTime, savedLegTime, startTime, legStartTime, currentLeg,
+          logHTML: logEntries.innerHTML
+        };
+        localStorage.setItem('xcTimerState', JSON.stringify(state));
+      }
+
+      function loadState() {
+        const savedClockPref = localStorage.getItem('xcClockZulu');
+        if (savedClockPref !== null) {
+          isZulu = savedClockPref === 'true';
+        }
+
+        const saved = localStorage.getItem('xcTimerState');
+        if (saved) {
+          const state = JSON.parse(saved);
+          isRunning = state.isRunning;
+          savedTotalTime = state.savedTotalTime;
+          savedLegTime = state.savedLegTime;
+          startTime = state.startTime;
+          legStartTime = state.legStartTime;
+          currentLeg = state.currentLeg;
+          
+          if (state.logHTML) {
+            logEntries.innerHTML = state.logHTML;
+            logContainer.style.display = "block";
+          }
+          
+          legLabel.innerText = `Leg ${currentLeg} Time`;
+          
+          if (isRunning) {
+            startBtn.innerText = "END FLIGHT";
+            startBtn.classList.add("running");
+            legBtn.classList.add("active");
+          } else if (savedTotalTime > 0) {
+            primaryControls.style.display = "none";
+            postFlightControls.style.display = "flex";
+          }
+        }
+        updateDisplay(); 
+      }
+
+      async function requestWakeLock() {
+        if ('wakeLock' in navigator) {
+          try {
+            wakeLock = await navigator.wakeLock.request('screen');
+            document.getElementById('wakeStatus').innerText = "☀️ Awake";
+            wakeLock.addEventListener('release', () => {
+              document.getElementById('wakeStatus').innerText = "🌙 Normal";
+              wakeLock = null;
+            });
+          } catch (err) {
+            document.getElementById('wakeStatus').innerText = "⚠️ Failed";
+          }
+        }
+      }
+
+      document.body.addEventListener('click', () => {
+        if (isRunning && wakeLock === null && customModal.style.display !== 'flex') {
+          requestWakeLock();
+        }
+      });
+
+      function toggleTimer() {
+        if (isRunning) {
+          openModal("End the flight and lock the timer?", "END FLIGHT", "#c92a2a", () => {
+            const currentTotal = savedTotalTime + (Date.now() - startTime);
+            const currentLegTime = savedLegTime + (Date.now() - legStartTime);
+            
+            logContainer.style.display = "block";
+            const row = document.createElement('div');
+            row.className = 'log-row';
+            row.innerHTML = `<span>Leg ${currentLeg} (Final)</span><span>${formatTime(currentLegTime)}</span><span>${formatTime(currentTotal)}</span>`;
+            logEntries.prepend(row);
+
+            isRunning = false;
+            savedTotalTime = currentTotal;
+            savedLegTime = currentLegTime;
+            
+            primaryControls.style.display = "none";
+            postFlightControls.style.display = "flex";
+
+            if (wakeLock !== null) wakeLock.release();
+            saveState();
+          });
+        } else {
+          requestWakeLock();
+          startTime = Date.now();
+          legStartTime = Date.now();
+          isRunning = true;
+          
+          startBtn.innerText = "END FLIGHT";
+          startBtn.classList.add("running");
+          legBtn.classList.add("active");
+          saveState();
+        }
+      }
+
+      function recordLeg() {
+        if (!isRunning) return;
+        
+        const currentTotal = savedTotalTime + (Date.now() - startTime);
+        const currentLegTime = savedLegTime + (Date.now() - legStartTime);
+        
+        logContainer.style.display = "block";
+        const row = document.createElement('div');
+        row.className = 'log-row';
+        row.innerHTML = `<span>Leg ${currentLeg}</span><span>${formatTime(currentLegTime)}</span><span>${formatTime(currentTotal)}</span>`;
+        logEntries.prepend(row);
+        
+        savedLegTime = 0;
+        legStartTime = Date.now();
+        currentLeg++;
+        legLabel.innerText = `Leg ${currentLeg} Time`;
+        saveState();
+      }
+
+      function saveLog() {
+        let csvContent = "Leg,Leg Time,Total Time\n";
+        const rows = document.querySelectorAll('.log-row');
+        
+        for (let i = rows.length - 1; i >= 0; i--) {
+          const spans = rows[i].querySelectorAll('span');
+          csvContent += `${spans[0].innerText},${spans[1].innerText},${spans[2].innerText}\n`;
+        }
+
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        
+        const dateStr = new Date().toISOString().split('T')[0];
+        a.download = `VFR_NavLog_${dateStr}.csv`;
+        
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+
+      function resetTimer() {
+        openModal("Reset the entire timer and clear the log?", "RESET ALL", "#c92a2a", () => {
+          isRunning = false;
+          savedTotalTime = 0;
+          savedLegTime = 0;
+          currentLeg = 1;
+          
+          startBtn.innerText = "START";
+          startBtn.classList.remove("running");
+          legBtn.classList.remove("active");
+          
+          legLabel.innerText = "Leg 1 Time";
+          
+          logContainer.style.display = "none";
+          logEntries.innerHTML = "";
+          
+          primaryControls.style.display = "flex";
+          postFlightControls.style.display = "none";
+
+          if (wakeLock !== null) wakeLock.release();
+          localStorage.removeItem('xcTimerState');
+        });
+      }
+
+      function updateDisplay() {
+        const now = new Date();
+        if (isZulu) {
+          clockDisplay.innerText = now.toISOString().substring(11, 19) + " Z";
+        } else {
+          clockDisplay.innerText = now.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }) + " LCL";
+        }
+
+        let currentTotal = savedTotalTime + (isRunning ? (Date.now() - startTime) : 0);
+        let currentLegT = savedLegTime + (isRunning ? (Date.now() - legStartTime) : 0);
+        
+        legTimeDisplay.innerText = formatTime(currentLegT);
+        totalTimeDisplay.innerText = "Total: " + formatTime(currentTotal);
+      }
+
+      function formatTime(ms) {
+        let totalSeconds = Math.floor(ms / 1000);
+        let h = Math.floor(totalSeconds / 3600);
+        let m = Math.floor((totalSeconds % 3600) / 60);
+        let s = totalSeconds % 60;
+        return pad(h) + ":" + pad(m) + ":" + pad(s);
+      }
+
+      function pad(num) {
+        return num.toString().padStart(2, '0');
+      }
+
+      window.addEventListener('online', () => document.getElementById('offlineStatus').innerText = "🟢 Ready");
+      window.addEventListener('offline', () => document.getElementById('offlineStatus').innerText = "✈️ Offline");
+      window.onload = loadState;
+    </script>
+  </body>
+</html>
