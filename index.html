@@ -67,7 +67,7 @@
   </head>
   <body>
     <div class="status-bar">
-      <span id="wakeStatus">🌙 Normal</span>
+      <span id="wakeStatus">v3.1 | 🌙 Normal</span>
       <span id="clockDisplay" onclick="toggleClockMode()" title="Tap to switch Local/Zulu">00:00:00 Z</span>
       <span id="offlineStatus" onclick="toggleFullScreen()" title="Tap for Fullscreen">🟢 Ready</span>
     </div>
@@ -142,8 +142,6 @@
 
       window.addEventListener('online', checkNetworkStatus);
       window.addEventListener('offline', checkNetworkStatus);
-      
-      // Run once immediately to set the correct initial state
       checkNetworkStatus();
 
       function toggleFullScreen() {
@@ -231,13 +229,13 @@
         if ('wakeLock' in navigator) {
           try {
             wakeLock = await navigator.wakeLock.request('screen');
-            document.getElementById('wakeStatus').innerText = "☀️ Awake";
+            document.getElementById('wakeStatus').innerText = "v3.1 | ☀️ Awake";
             wakeLock.addEventListener('release', () => {
-              document.getElementById('wakeStatus').innerText = "🌙 Normal";
+              document.getElementById('wakeStatus').innerText = "v3.1 | 🌙 Normal";
               wakeLock = null;
             });
           } catch (err) {
-            document.getElementById('wakeStatus').innerText = "⚠️ Failed";
+            document.getElementById('wakeStatus').innerText = "v3.1 | ⚠️ Failed";
           }
         }
       }
