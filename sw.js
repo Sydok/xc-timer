@@ -6,39 +6,39 @@ const ASSETS_TO_CACHE = [
   './icon.png'
 ];
 
-// Install event: Caches the files
+// Install event: Forces the new service worker to activate immediately
 self.addEventListener('install', event => {
+  self.skipWaiting(); // Skips waiting stage
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => cache.addAll(ASSETS_TO_CACHE))
   );
 });
 
-// Fetch event: Serves from cache if offline, fetches from network if online
+// Fetch event: Serves from cache, falls back to network
 self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request)
       .then(response => {
         if (response) {
-          return response; // Return cached version
+          return response;
         }
-        return fetch(event.request); // Fetch from network
+        return fetch(event.request);
       })
   );
 });
 
-// Activate event: Cleans up old caches when you update the version
+// Activate event: Cleans up old caches and claims control of all open pages
 self.addEventListener('activate', event => {
-  const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
+          if (cacheName !== CACHE_NAME) {
             return caches.delete(cacheName);
           }
         })
       );
-    })
+    }).then(() => self.clients.claim()) // Takes immediate control
   );
 });
