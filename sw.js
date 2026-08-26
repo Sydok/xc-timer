@@ -1,4 +1,4 @@
-const CACHE_NAME = 'xc-timer-v1';
+const CACHE_NAME = 'xc-timer-v2';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
