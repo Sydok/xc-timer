@@ -12,7 +12,7 @@
     <title>XC Timer</title>
     
     <style>
-      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #121212; color: #ffffff; margin: 0; padding: 20px; text-align: center; user-select: none; }
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #121212; color: #ffffff; margin: 0; padding: 20px; text-align: center; user-select: none; transition: background-color 0.3s; }
       
       .timers { display: flex; flex-direction: column; align-items: center; margin: 40px 0; }
       .leg-time { font-size: 5rem; font-weight: bold; line-height: 1; font-variant-numeric: tabular-nums; color: #4dabf7; }
@@ -20,7 +20,7 @@
       .total-time { font-size: 2rem; color: #aaaaaa; margin-top: 15px; font-variant-numeric: tabular-nums; }
       
       .controls { display: flex; gap: 15px; justify-content: center; margin-bottom: 30px; }
-      button { border: none; border-radius: 12px; font-size: 1.4rem; font-weight: bold; padding: 20px; width: 100%; cursor: pointer; color: white; touch-action: manipulation; }
+      button { border: none; border-radius: 12px; font-size: 1.4rem; font-weight: bold; padding: 20px; width: 100%; cursor: pointer; color: white; touch-action: manipulation; transition: all 0.2s; }
       
       #startBtn { background-color: #2b8a3e; flex: 1; }
       #startBtn.running { background-color: #c92a2a; }
@@ -42,8 +42,7 @@
       .log-row:last-child { border-bottom: none; }
       
       .status-bar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; font-size: 0.85rem; color: #777; margin-top: 20px; }
-      #wakeStatus { text-align: left; }
-      
+      #leftStatus { text-align: left; }
       #offlineStatus { text-align: right; cursor: pointer; padding: 5px; }
       #versionDisplay { color: #555; }
       
@@ -64,11 +63,34 @@
       .modal-buttons { display: flex; gap: 15px; }
       .modal-btn { padding: 18px; font-size: 1.2rem; flex: 1; }
       .btn-cancel { background-color: #495057; }
+
+      /* --- NIGHT VISION MODE (PURE RED) --- */
+      body.night-mode { background-color: #000000; color: #ff0000; }
+      body.night-mode .leg-time { color: #ff0000; }
+      body.night-mode .total-time { color: #cc0000; }
+      body.night-mode .leg-label { color: #aa0000; }
+      body.night-mode .status-bar { color: #aa0000; }
+      body.night-mode #versionDisplay { color: #aa0000; }
+      body.night-mode #clockDisplay { color: #ff0000; background-color: #110000; border: 1px solid #440000; }
+      
+      body.night-mode button { background-color: #000000 !important; color: #ff0000; border: 1px solid #ff0000; }
+      body.night-mode #startBtn.running { background-color: #220000 !important; border-color: #ff0000; }
+      body.night-mode #legBtn.active { background-color: #110000 !important; }
+      
+      body.night-mode .log-container { background-color: #000000; border: 1px solid #ff0000; }
+      body.night-mode .log-header { color: #ff0000; border-bottom: 1px solid #ff0000; }
+      body.night-mode .log-row { border-bottom: 1px solid #440000; }
+      
+      body.night-mode .modal-box { background-color: #000000; border: 1px solid #ff0000; }
+      body.night-mode .btn-cancel { background-color: #000000 !important; border: 1px solid #aa0000; color: #aa0000; }
     </style>
   </head>
   <body>
     <div class="status-bar">
-      <span id="wakeStatus">🌙 Normal</span>
+      <span id="leftStatus">
+        <span id="nightToggle" style="cursor:pointer; font-weight:bold;" onclick="toggleNightMode()">🔴 NVG</span> | 
+        <span id="wakeStatus">🌙 Norm</span>
+      </span>
       <span id="clockDisplay" onclick="toggleClockMode()" title="Tap to switch Local/Zulu">00:00:00 Z</span>
       <span id="offlineStatus" onclick="toggleFullScreen()" title="Tap for Fullscreen">
         <span id="networkText">🟢 Ready</span><span id="versionDisplay"></span>
@@ -118,6 +140,7 @@
       let wakeLock = null;
       let pendingModalAction = null;
       let isZulu = true; 
+      let isNightMode = false;
 
       const startBtn = document.getElementById('startBtn');
       const legBtn = document.getElementById('legBtn');
@@ -132,8 +155,23 @@
       const clockDisplay = document.getElementById('clockDisplay');
       const networkText = document.getElementById('networkText');
       const versionDisplay = document.getElementById('versionDisplay');
+      const nightToggle = document.getElementById('nightToggle');
 
       setInterval(updateDisplay, 1000);
+
+      // --- NIGHT VISION LOGIC ---
+      function toggleNightMode() {
+        isNightMode = !isNightMode;
+        if (isNightMode) {
+          document.body.classList.add('night-mode');
+          nightToggle.innerText = "☀️ DAY";
+        } else {
+          document.body.classList.remove('night-mode');
+          nightToggle.innerText = "🔴 NVG";
+        }
+        localStorage.setItem('xcNightMode', isNightMode);
+        checkNetworkStatus(); // Update emoji colors
+      }
 
       // --- AUTOMATIC VERSION DISPLAY ---
       function displayAppVersion() {
@@ -151,9 +189,9 @@
       // --- NETWORK STATUS LOGIC ---
       function checkNetworkStatus() {
         if (navigator.onLine) {
-          networkText.innerText = "🟢 Ready";
+          networkText.innerText = isNightMode ? "Ready" : "🟢 Ready";
         } else {
-          networkText.innerText = "✈️ Offline";
+          networkText.innerText = isNightMode ? "Offline" : "✈️ Offline";
         }
       }
 
@@ -182,7 +220,7 @@
         document.getElementById('modalText').innerText = message;
         const confirmBtn = document.getElementById('modalConfirmBtn');
         confirmBtn.innerText = confirmText;
-        confirmBtn.style.backgroundColor = confirmColor;
+        confirmBtn.style.backgroundColor = isNightMode ? "#000" : confirmColor;
         
         pendingModalAction = actionFunction;
         customModal.style.display = 'flex';
@@ -207,9 +245,14 @@
       }
 
       function loadState() {
+        // Load Clock Preference
         const savedClockPref = localStorage.getItem('xcClockZulu');
-        if (savedClockPref !== null) {
-          isZulu = savedClockPref === 'true';
+        if (savedClockPref !== null) isZulu = savedClockPref === 'true';
+
+        // Load Night Mode Preference
+        const savedNightMode = localStorage.getItem('xcNightMode');
+        if (savedNightMode === 'true') {
+          toggleNightMode(); // Triggers the visual change
         }
 
         const saved = localStorage.getItem('xcTimerState');
@@ -247,11 +290,11 @@
             wakeLock = await navigator.wakeLock.request('screen');
             document.getElementById('wakeStatus').innerText = "☀️ Awake";
             wakeLock.addEventListener('release', () => {
-              document.getElementById('wakeStatus').innerText = "🌙 Normal";
+              document.getElementById('wakeStatus').innerText = "🌙 Norm";
               wakeLock = null;
             });
           } catch (err) {
-            document.getElementById('wakeStatus').innerText = "⚠️ Failed";
+            document.getElementById('wakeStatus').innerText = "⚠️ Fail";
           }
         }
       }
@@ -401,6 +444,7 @@
           navigator.serviceWorker.register('./sw.js')
             .then(registration => {
               console.log('ServiceWorker successfully registered');
+              registration.update(); 
             })
             .catch(err => {
               console.warn('ServiceWorker registration failed: ', err);
