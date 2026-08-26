@@ -156,6 +156,7 @@
       const networkText = document.getElementById('networkText');
       const versionDisplay = document.getElementById('versionDisplay');
       const nightToggle = document.getElementById('nightToggle');
+      const wakeStatus = document.getElementById('wakeStatus');
 
       setInterval(updateDisplay, 1000);
 
@@ -164,16 +165,30 @@
         isNightMode = !isNightMode;
         if (isNightMode) {
           document.body.classList.add('night-mode');
-          nightToggle.innerText = "☀️ DAY";
+          nightToggle.innerText = "DAY";
         } else {
           document.body.classList.remove('night-mode');
           nightToggle.innerText = "🔴 NVG";
         }
         localStorage.setItem('xcNightMode', isNightMode);
-        checkNetworkStatus(); // Update emoji colors
+        
+        // Update emojis based on mode
+        checkNetworkStatus(); 
+        updateWakeStatusText(); 
       }
 
-      // --- AUTOMATIC VERSION DISPLAY ---
+      function updateWakeStatusText() {
+        if (wakeLock !== null) {
+          wakeStatus.innerText = isNightMode ? "Awake" : "☀️ Awake";
+        } else if (wakeStatus.innerText.includes("Fail")) {
+          wakeStatus.innerText = isNightMode ? "Fail" : "⚠️ Fail";
+        } else if (wakeStatus.innerText.includes("No API")) {
+          wakeStatus.innerText = isNightMode ? "No API" : "🚫 No API";
+        } else {
+          wakeStatus.innerText = isNightMode ? "Norm" : "🌙 Norm";
+        }
+      }
+
       function displayAppVersion() {
         if ('caches' in window) {
           caches.keys().then(keys => {
@@ -186,7 +201,6 @@
         }
       }
 
-      // --- NETWORK STATUS LOGIC ---
       function checkNetworkStatus() {
         if (navigator.onLine) {
           networkText.innerText = isNightMode ? "Ready" : "🟢 Ready";
@@ -245,15 +259,11 @@
       }
 
       function loadState() {
-        // Load Clock Preference
         const savedClockPref = localStorage.getItem('xcClockZulu');
         if (savedClockPref !== null) isZulu = savedClockPref === 'true';
 
-        // Load Night Mode Preference
         const savedNightMode = localStorage.getItem('xcNightMode');
-        if (savedNightMode === 'true') {
-          toggleNightMode(); // Triggers the visual change
-        }
+        if (savedNightMode === 'true') toggleNightMode(); 
 
         const saved = localStorage.getItem('xcTimerState');
         if (saved) {
@@ -288,14 +298,17 @@
         if ('wakeLock' in navigator) {
           try {
             wakeLock = await navigator.wakeLock.request('screen');
-            document.getElementById('wakeStatus').innerText = "☀️ Awake";
+            updateWakeStatusText();
             wakeLock.addEventListener('release', () => {
-              document.getElementById('wakeStatus').innerText = "🌙 Norm";
               wakeLock = null;
+              updateWakeStatusText();
             });
           } catch (err) {
-            document.getElementById('wakeStatus').innerText = "⚠️ Fail";
+            wakeStatus.innerText = isNightMode ? "Fail" : "⚠️ Fail";
           }
+        } else {
+          // If the browser API is disabled (sometimes happens in "fullscreen" PWAs)
+          wakeStatus.innerText = isNightMode ? "No API" : "🚫 No API";
         }
       }
 
