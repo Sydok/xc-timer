@@ -41,14 +41,14 @@
       .log-header span { font-size: 0.9rem !important; }
       .log-row:last-child { border-bottom: none; }
       
-      .status-bar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; font-size: 0.85rem; color: #777; margin-top: 20px; }
+      .status-bar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; font-size: 0.75rem; color: #777; margin-top: 15px; white-space: nowrap; }
       #leftStatus { text-align: left; }
-      #offlineStatus { text-align: right; cursor: pointer; padding: 5px; }
+      #offlineStatus { text-align: right; cursor: pointer; padding: 5px 0; }
       #versionDisplay { color: #555; }
       
       #clockDisplay { 
-        font-size: 1.25rem; color: #aaa; font-weight: bold; font-variant-numeric: tabular-nums;
-        background-color: #2c2c2c; padding: 8px 16px; border-radius: 8px; cursor: pointer; text-align: center;
+        font-size: 1.15rem; color: #aaa; font-weight: bold; font-variant-numeric: tabular-nums;
+        background-color: #2c2c2c; padding: 6px 10px; border-radius: 8px; cursor: pointer; text-align: center; margin: 0 5px;
       }
 
       .modal-overlay {
@@ -160,7 +160,6 @@
 
       setInterval(updateDisplay, 1000);
 
-      // --- NIGHT VISION LOGIC ---
       function toggleNightMode() {
         isNightMode = !isNightMode;
         if (isNightMode) {
@@ -172,7 +171,6 @@
         }
         localStorage.setItem('xcNightMode', isNightMode);
         
-        // Update emojis based on mode
         checkNetworkStatus(); 
         updateWakeStatusText(); 
       }
@@ -307,7 +305,6 @@
             wakeStatus.innerText = isNightMode ? "Fail" : "⚠️ Fail";
           }
         } else {
-          // If the browser API is disabled (sometimes happens in "fullscreen" PWAs)
           wakeStatus.innerText = isNightMode ? "No API" : "🚫 No API";
         }
       }
