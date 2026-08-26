@@ -127,8 +127,24 @@
       const logEntries = document.getElementById('logEntries');
       const customModal = document.getElementById('customModal');
       const clockDisplay = document.getElementById('clockDisplay');
+      const offlineStatus = document.getElementById('offlineStatus');
 
       setInterval(updateDisplay, 100);
+
+      // --- NETWORK STATUS LOGIC ---
+      function checkNetworkStatus() {
+        if (navigator.onLine) {
+          offlineStatus.innerText = "🟢 Ready";
+        } else {
+          offlineStatus.innerText = "✈️ Offline";
+        }
+      }
+
+      window.addEventListener('online', checkNetworkStatus);
+      window.addEventListener('offline', checkNetworkStatus);
+      
+      // Run once immediately to set the correct initial state
+      checkNetworkStatus();
 
       function toggleFullScreen() {
         if (!document.fullscreenElement) {
@@ -360,8 +376,6 @@
         return num.toString().padStart(2, '0');
       }
 
-      window.addEventListener('online', () => document.getElementById('offlineStatus').innerText = "🟢 Ready");
-      window.addEventListener('offline', () => document.getElementById('offlineStatus').innerText = "✈️ Offline");
       window.onload = loadState;
 
       if ('serviceWorker' in navigator) {
