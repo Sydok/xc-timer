@@ -45,6 +45,7 @@
       #wakeStatus { text-align: left; }
       
       #offlineStatus { text-align: right; cursor: pointer; padding: 5px; }
+      #versionDisplay { color: #555; }
       
       #clockDisplay { 
         font-size: 1.25rem; color: #aaa; font-weight: bold; font-variant-numeric: tabular-nums;
@@ -67,9 +68,11 @@
   </head>
   <body>
     <div class="status-bar">
-      <span id="wakeStatus">v3.1 | 🌙 Normal</span>
+      <span id="wakeStatus">🌙 Normal</span>
       <span id="clockDisplay" onclick="toggleClockMode()" title="Tap to switch Local/Zulu">00:00:00 Z</span>
-      <span id="offlineStatus" onclick="toggleFullScreen()" title="Tap for Fullscreen">🟢 Ready</span>
+      <span id="offlineStatus" onclick="toggleFullScreen()" title="Tap for Fullscreen">
+        <span id="networkText">🟢 Ready</span><span id="versionDisplay"></span>
+      </span>
     </div>
 
     <div class="timers">
@@ -127,22 +130,35 @@
       const logEntries = document.getElementById('logEntries');
       const customModal = document.getElementById('customModal');
       const clockDisplay = document.getElementById('clockDisplay');
-      const offlineStatus = document.getElementById('offlineStatus');
+      const networkText = document.getElementById('networkText');
+      const versionDisplay = document.getElementById('versionDisplay');
 
-      setInterval(updateDisplay, 100);
+      setInterval(updateDisplay, 1000);
+
+      // --- AUTOMATIC VERSION DISPLAY ---
+      function displayAppVersion() {
+        if ('caches' in window) {
+          caches.keys().then(keys => {
+            const cacheName = keys.find(key => key.startsWith('xc-timer-v'));
+            if (cacheName) {
+              const version = cacheName.split('-')[2];
+              versionDisplay.innerText = ' | ' + version;
+            }
+          });
+        }
+      }
 
       // --- NETWORK STATUS LOGIC ---
       function checkNetworkStatus() {
         if (navigator.onLine) {
-          offlineStatus.innerText = "🟢 Ready";
+          networkText.innerText = "🟢 Ready";
         } else {
-          offlineStatus.innerText = "✈️ Offline";
+          networkText.innerText = "✈️ Offline";
         }
       }
 
       window.addEventListener('online', checkNetworkStatus);
       window.addEventListener('offline', checkNetworkStatus);
-      checkNetworkStatus();
 
       function toggleFullScreen() {
         if (!document.fullscreenElement) {
@@ -229,13 +245,13 @@
         if ('wakeLock' in navigator) {
           try {
             wakeLock = await navigator.wakeLock.request('screen');
-            document.getElementById('wakeStatus').innerText = "v3.1 | ☀️ Awake";
+            document.getElementById('wakeStatus').innerText = "☀️ Awake";
             wakeLock.addEventListener('release', () => {
-              document.getElementById('wakeStatus').innerText = "v3.1 | 🌙 Normal";
+              document.getElementById('wakeStatus').innerText = "🌙 Normal";
               wakeLock = null;
             });
           } catch (err) {
-            document.getElementById('wakeStatus').innerText = "v3.1 | ⚠️ Failed";
+            document.getElementById('wakeStatus').innerText = "⚠️ Failed";
           }
         }
       }
@@ -374,7 +390,11 @@
         return num.toString().padStart(2, '0');
       }
 
-      window.onload = loadState;
+      window.onload = () => {
+        loadState();
+        displayAppVersion();
+        checkNetworkStatus();
+      };
 
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
